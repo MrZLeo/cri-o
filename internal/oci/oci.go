@@ -77,6 +77,7 @@ type RuntimeImpl interface {
 	ReopenContainerLog(context.Context, *Container) error
 	CheckpointContainer(context.Context, *Container, *rspec.Spec, bool) error
 	RestoreContainer(context.Context, *Container, string, string) error
+	ForkContainer(context.Context, string, string) error
 }
 
 // New creates a new Runtime with options provided
@@ -207,6 +208,21 @@ func (r *Runtime) RuntimeImpl(c *Container) (RuntimeImpl, error) {
 	return impl, nil
 }
 
+func (r *Runtime) RuntimeImplFromHandler(ctx context.Context, runtimeHandler string) (RuntimeImpl, error) {
+	ctx, span := log.StartSpan(ctx)
+	defer span.End()
+
+	log.Infof(ctx, "runtime impl from handler: %s", runtimeHandler)
+
+	rh, err := r.getRuntimeHandler(runtimeHandler)
+	if err != nil {
+		log.Infof(ctx, "error when get runtime handler")
+		return nil, err
+	}
+
+	return newRuntimeOCI(r, rh), nil
+}
+
 // CreateContainer creates a container.
 func (r *Runtime) CreateContainer(ctx context.Context, c *Container, cgroupParent string, restore bool) error {
 	ctx, span := log.StartSpan(ctx)
@@ -223,6 +239,20 @@ func (r *Runtime) CreateContainer(ctx context.Context, c *Container, cgroupParen
 	r.runtimeImplMapMutex.Unlock()
 
 	return impl.CreateContainer(ctx, c, cgroupParent, restore)
+}
+
+// ForkContainer fork a container from base and send it to spin
+func (r *Runtime) ForkContainer(ctx context.Context, runtimeHandler string, base string, spin string) error {
+	ctx, span := log.StartSpan(ctx)
+	defer span.End()
+
+	// Instantiate a new runtime implementation for this new container
+	impl, err := r.RuntimeImplFromHandler(ctx, runtimeHandler)
+	if err != nil {
+		return err
+	}
+
+	return impl.ForkContainer(ctx, base, spin)
 }
 
 // StartContainer starts a container.

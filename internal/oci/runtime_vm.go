@@ -1057,3 +1057,14 @@ func (r *runtimeVM) RestoreContainer(ctx context.Context, c *Container, cgroupPa
 
 	return errors.New("restoring not implemented for runtimeVM")
 }
+
+func (r *runtimeVM) ForkContainer(
+	ctx context.Context,
+	base string,
+	spin string,
+) (retErr error) {
+	ctx, span := log.StartSpan(ctx)
+	defer span.End()
+	log.Infof(ctx, "cfork error: using runtime VM")
+	return nil
+}

@@ -120,6 +120,9 @@ func (r *runtimeOCI) CreateContainer(ctx context.Context, c *Container, cgroupPa
 		"-u", c.ID(),
 	}
 
+	// dump runtime argument
+	log.Infof(ctx, "%s", args)
+
 	if r.config.CgroupManager().IsSystemd() {
 		args = append(args, "-s")
 	}
@@ -169,6 +172,7 @@ func (r *runtimeOCI) CreateContainer(ctx context.Context, c *Container, cgroupPa
 		"args": args,
 	}).Debugf("running conmon: %s", r.handler.MonitorPath)
 
+	// TODO: run conmon here with args and envs
 	cmd := cmdrunner.Command(r.handler.MonitorPath, args...) // nolint: gosec
 	cmd.Dir = c.bundlePath
 	cmd.SysProcAttr = sysProcAttrPlatform()
@@ -325,6 +329,36 @@ func (r *runtimeOCI) StartContainer(ctx context.Context, c *Container) error {
 		return err
 	}
 	c.state.Started = time.Now()
+	return nil
+}
+
+// call `runc fork2container` to fork container from base
+// if we want to fork a process, createContainer should give a
+func (r *runtimeOCI) ForkContainer(
+	ctx context.Context,
+	base string,
+	spin string,
+) (retErr error) {
+	ctx, span := log.StartSpan(ctx)
+	defer span.End()
+
+	log.Infof(ctx, "cfork start, calling runc")
+
+	cmd := cmdrunner.Command(
+		// r.handler.RuntimePath,
+		"/home/fedora/runc/runc",
+		"fork2container",
+		"--zygote",
+		base,
+		"--target",
+		spin,
+	)
+	if err := cmd.Run(); err != nil {
+		log.Infof(ctx, "cfork error: %w", err)
+		return err
+	}
+	log.Infof(ctx, "cfork finish, base=%s, spin=%s", base, spin)
+
 	return nil
 }
 

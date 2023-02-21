@@ -28,6 +28,7 @@ var (
 )
 
 // Sandbox contains data surrounding kubernetes sandboxes on the server
+// TODO: add a flag here to show that this sandbox is forkable
 type Sandbox struct {
 	criSandbox   *types.PodSandbox
 	portMappings []*hostport.PortMapping
@@ -64,6 +65,9 @@ type Sandbox struct {
 	hostNetwork        bool
 	usernsMode         string
 	containerEnvPath   string
+
+	// whether this sandbox is forkable
+	forkable bool
 }
 
 // DefaultShmSize is the default shm size
@@ -284,6 +288,11 @@ func (s *Sandbox) Hostname() string {
 // PortMappings returns a list of port mappings between the host and the sandbox
 func (s *Sandbox) PortMappings() []*hostport.PortMapping {
 	return s.portMappings
+}
+
+// Whether pod is forkable
+func (s *Sandbox) Forkable() bool {
+	return s.forkable
 }
 
 // AddContainer adds a container to the sandbox

@@ -295,3 +295,14 @@ func (r *runtimePod) ReopenContainerLog(ctx context.Context, c *Container) error
 		ID: c.ID(),
 	})
 }
+
+func (r *runtimePod) ForkContainer(
+	ctx context.Context,
+	base string,
+	spin string,
+) (retErr error) {
+	ctx, span := log.StartSpan(ctx)
+	defer span.End()
+	log.Infof(ctx, "cfork error: using runtime pod")
+	return nil
+}

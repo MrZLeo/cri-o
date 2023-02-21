@@ -686,6 +686,7 @@ func (s *Server) removeInfraContainer(ctx context.Context, c *oci.Container) {
 	s.ContainerServer.RemoveInfraContainer(ctx, c)
 }
 
+// get *Sandbox from podSandboxID
 func (s *Server) getPodSandboxFromRequest(ctx context.Context, podSandboxID string) (*sandbox.Sandbox, error) {
 	ctx, span := log.StartSpan(ctx)
 	defer span.End()
@@ -693,11 +694,14 @@ func (s *Server) getPodSandboxFromRequest(ctx context.Context, podSandboxID stri
 		return nil, sandbox.ErrIDEmpty
 	}
 
+	// podSandboxID --> sandboxID
 	sandboxID, err := s.PodIDIndex().Get(podSandboxID)
 	if err != nil {
 		return nil, fmt.Errorf("PodSandbox with ID starting with %s not found: %w", podSandboxID, err)
 	}
 
+	// sandBoxID --> *Sandbox (real sandbox instance)
+	// TODO: when create a pod, link the id to the same sanbox instance, so we can get the same sandbox instance here, and check whether the sandbox is forkable
 	sb := s.getSandbox(ctx, sandboxID)
 	if sb == nil {
 		return nil, fmt.Errorf("specified pod sandbox not found: %s", sandboxID)

@@ -143,6 +143,7 @@ type container struct {
 }
 
 // New creates a new, empty Sandbox instance
+// TODO: do container fork here
 func New() (Container, error) {
 	spec, err := generate.New("linux")
 	if err != nil {

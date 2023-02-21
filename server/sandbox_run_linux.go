@@ -42,6 +42,12 @@ import (
 // DefaultUserNSSize is the default size for the user namespace created
 const DefaultUserNSSize = 65536
 
+// Store the ID of spin_sandbox and base_sandbox
+var (
+	SPIN_SANDBOX string
+	BASE_SANDBOX string
+)
+
 // addToMappingsIfMissing ensures the specified id is mapped from the host.
 func addToMappingsIfMissing(ids []idtools.IDMap, id int64) []idtools.IDMap {
 	firstAvailable := int(0)
@@ -335,10 +341,42 @@ func (s *Server) getSandboxIDMappings(ctx context.Context, sb *libsandbox.Sandbo
 	return mappings, nil
 }
 
+func isForkablePod(req *types.RunPodSandboxRequest) bool {
+	_, ok := req.Config.Annotations["cfork-function"]
+	return ok
+}
+
+func isSpinPod(req *types.RunPodSandboxRequest) bool {
+	_, ok := req.Config.Annotations["spin"]
+	return ok
+}
+
+func isBasePod(req *types.RunPodSandboxRequest) bool {
+	_, ok := req.Config.Annotations["base"]
+	return ok
+}
+
+func (s *Server) getSpinPod() string {
+	return SPIN_SANDBOX
+}
+
+func (s *Server) getBasePod() string {
+	return BASE_SANDBOX
+}
+
 func (s *Server) runPodSandbox(ctx context.Context, req *types.RunPodSandboxRequest) (resp *types.RunPodSandboxResponse, retErr error) {
 	ctx, span := log.StartSpan(ctx)
 	defer span.End()
+
+	// TODO: decide whether pod is forkable?
+	if isForkablePod(req) {
+		// return SPIN_SANDBOX in order to run function in spin_sandbox
+		return &types.RunPodSandboxResponse{PodSandboxId: SPIN_SANDBOX}, nil
+	}
+
 	sbox := sboxfactory.New()
+	// DEBUG: test the config of each pod
+	// log.Infof(ctx, "the config is: %s", req.Config)
 	if err := sbox.SetConfig(req.Config); err != nil {
 		return nil, fmt.Errorf("setting sandbox config: %w", err)
 	}
@@ -354,6 +392,14 @@ func (s *Server) runPodSandbox(ctx context.Context, req *types.RunPodSandboxRequ
 
 	if err := sbox.SetNameAndID(); err != nil {
 		return nil, fmt.Errorf("setting pod sandbox name and id: %w", err)
+	}
+
+	// check whether it's spin or base
+	if isBasePod(req) {
+		BASE_SANDBOX = sbox.ID()
+	}
+	if isSpinPod(req) {
+		SPIN_SANDBOX = sbox.ID()
 	}
 
 	resourceCleaner := resourcestore.NewResourceCleaner()

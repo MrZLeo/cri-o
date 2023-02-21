@@ -14,6 +14,8 @@ import (
 	types "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
 
+var SPIN_START bool = false
+
 // StartContainer starts the container.
 func (s *Server) StartContainer(ctx context.Context, req *types.StartContainerRequest) (res *types.StartContainerResponse, retErr error) {
 	ctx, span := log.StartSpan(ctx)
@@ -22,6 +24,15 @@ func (s *Server) StartContainer(ctx context.Context, req *types.StartContainerRe
 	c, err := s.GetContainerFromShortID(ctx, req.ContainerId)
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "could not find container %q: %v", req.ContainerId, err)
+	}
+
+	// check if it's spin
+	if c.ID() == SPIN_CONTAINER {
+		if SPIN_START {
+			return &types.StartContainerResponse{}, nil
+		} else {
+			SPIN_START = true
+		}
 	}
 
 	if c.Restore() {

@@ -28,6 +28,11 @@ import (
 // sync with https://github.com/containers/storage/blob/7fe03f6c765f2adbc75a5691a1fb4f19e56e7071/pkg/truncindex/truncindex.go#L92
 const noSuchID = "no such id"
 
+var (
+	SPIN_CONTAINER string
+	BASE_CONTAINER string
+)
+
 type orderedMounts []rspec.Mount
 
 // Len returns the number of mounts. Used in sorting.
@@ -295,6 +300,21 @@ func generateUserString(username, imageUser string, uid *types.Int64Value) strin
 	return userstr
 }
 
+func isSpinContainer(req *types.CreateContainerRequest) bool {
+	_, ok := req.Config.Annotations["spin"]
+	return ok
+}
+
+func isBaseContainer(req *types.CreateContainerRequest) bool {
+	_, ok := req.Config.Annotations["base"]
+	return ok
+}
+
+func isForkableContainer(req *types.CreateContainerRequest) bool {
+	_, ok := req.Config.Annotations["cfork-function"]
+	return ok
+}
+
 // CreateContainer creates a new container in specified PodSandbox
 func (s *Server) CreateContainer(ctx context.Context, req *types.CreateContainerRequest) (res *types.CreateContainerResponse, retErr error) {
 	log.Infof(ctx, "Creating container: %s", translateLabelsToDescription(req.GetConfig().GetLabels()))
@@ -351,7 +371,11 @@ func (s *Server) CreateContainer(ctx context.Context, req *types.CreateContainer
 		}, nil
 	}
 
+	// INFO: from ID to the sandbox instance. where ID is inside the kubelet request
+	// NOTE: we should identify the container here in order to send fork command to base container
+	// log.Infof(ctx, "podID that container will be created is: %s", req.PodSandboxId)
 	sb, err := s.getPodSandboxFromRequest(ctx, req.PodSandboxId)
+	log.Infof(ctx, "pod id is: %s", req.PodSandboxId)
 	if err != nil {
 		if err == sandbox.ErrIDEmpty {
 			return nil, err
@@ -377,6 +401,25 @@ func (s *Server) CreateContainer(ctx context.Context, req *types.CreateContainer
 
 	if err := ctr.SetNameAndID(""); err != nil {
 		return nil, fmt.Errorf("setting container name and ID: %w", err)
+	}
+
+	// whether container is spin or base
+	if isSpinContainer(req) {
+		SPIN_CONTAINER = ctr.ID()
+		log.Infof(ctx, "get spin container=%s", SPIN_CONTAINER)
+	}
+	if isBaseContainer(req) {
+		BASE_CONTAINER = ctr.ID()
+		log.Infof(ctx, "get base container=%s", BASE_CONTAINER)
+	}
+
+	// whether is forkable
+	if isForkableContainer(req) {
+		log.Infof(ctx, "fork start")
+		s.Runtime().ForkContainer(ctx, sb.RuntimeHandler(), BASE_CONTAINER, SPIN_CONTAINER)
+		return &types.CreateContainerResponse{
+			ContainerId: SPIN_CONTAINER,
+		}, nil
 	}
 
 	resourceCleaner := resourcestore.NewResourceCleaner()
