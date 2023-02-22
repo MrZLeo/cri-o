@@ -196,10 +196,10 @@ test/nri/nri.test: $(wildcard test/nri/*.go) .gopathok
 	$(GO) test --tags "test $(BUILDTAGS)" -c $(PROJECT)/test/nri -o $@ 
 
 bin/crio: $(GO_FILES) .gopathok
-	$(GO_BUILD) $(GCFLAGS) $(GO_LDFLAGS) -tags "$(BUILDTAGS)" -o $@ $(PROJECT)/cmd/crio
+	$(GO_BUILD) $(GCFLAGS) $(GO_LDFLAGS) -tags "$(BUILDTAGS)" -buildvcs=false -o $@ $(PROJECT)/cmd/crio
 
 bin/crio-status: $(GO_FILES) .gopathok
-	$(GO_BUILD) $(GCFLAGS) $(GO_LDFLAGS) -tags "$(BUILDTAGS)" -o $@ $(PROJECT)/cmd/crio-status
+	$(GO_BUILD) $(GCFLAGS) $(GO_LDFLAGS) -tags "$(BUILDTAGS)" -buildvcs=false -o $@ $(PROJECT)/cmd/crio-status
 
 build-static:
 	$(CONTAINER_RUNTIME) run --rm --privileged -ti -v /:/mnt \
