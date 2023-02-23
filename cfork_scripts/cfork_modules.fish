@@ -20,7 +20,7 @@ end
 # remove current pod and container
 function remove_all
     sudo crictl ps | awk '{ print$1 }' | tail -n +2 | xargs sudo crictl stop | xargs sudo crictl rm
-    sudo crictl pods | awk '{ print$1 }' | tail -n +2 | xargs sudo crictl stopp | xargs sudo crictl rmp
+    # sudo crictl pods | awk '{ print$1 }' | tail -n +2 | xargs sudo crictl stopp | xargs sudo crictl rmp
 end
 
 function pull_all_cfork_image

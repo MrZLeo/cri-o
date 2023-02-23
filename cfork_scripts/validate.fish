@@ -1,4 +1,4 @@
-#! /home/linuxbrew/.linuxbrew/bin/fish
+#! /usr/bin/fish
 
 source cfork_modules.fish
 
