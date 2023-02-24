@@ -1,0 +1,48 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: multi-container
+  namespace: default
+spec:
+  template:
+    metadata:
+        annotations:
+          autoscaling.knative.dev/min-scale: "1"
+    spec:
+        shareProcessNamespace: true
+        containers:
+          - name: rust-demo
+            image: docker.io/mrzleo/rust-demo
+            ports:
+              - containerPort: 8080
+          - name: spin
+            image: docker.io/mrzleo/spin-base-image
+            securityContext:
+              capabilities:
+                add:
+                - CAP_SYS_CHROOT
+                - CAP_SYS_ADMIN
+                - CAP_SETFCAP
+                - CAP_NET_RAW
+                - CAP_NET_BIND_SERVICE
+                - CAP_MKNOD
+                - CAP_AUDIT_WRITE
+          - name: base
+            image: docker.io/mrzleo/python-base-image
+            volumeMounts:
+            - mountPath: /cfork/
+              name: soc
+            securityContext:
+              capabilities:
+                add:
+                - CAP_SYS_CHROOT
+                - CAP_SYS_ADMIN
+                - CAP_SETFCAP
+                - CAP_NET_RAW
+                - CAP_NET_BIND_SERVICE
+                - CAP_MKNOD
+                - CAP_AUDIT_WRITE
+        volumes:
+        - name: soc
+          emptyDir:
+            sizeLimit: 500Mi
