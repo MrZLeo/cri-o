@@ -1,0 +1,2 @@
+Mar 02 05:46:02 ip-172-31-29-108.ec2.internal crio[2000274]: time="2023-03-02 05:46:02.371442261Z" level=info msg="[sandbox@1677735962371,432424] %!s(MISSING)\n" id=425ad657-0d73-4282-8350-7601cde614f7 name=/run>
+Mar 02 05:46:02 ip-172-31-29-108.ec2.internal crio[2000274]: time="2023-03-02 05:46:02.371523290Z" level=info msg="Running pod sandbox: default/multi-container-00002-deployment-5455558fb8-mzvsj/POD" id=425ad657->

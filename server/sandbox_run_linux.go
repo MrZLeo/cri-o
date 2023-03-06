@@ -44,8 +44,8 @@ const DefaultUserNSSize = 65536
 
 // Store the ID of spin_sandbox and base_sandbox
 var (
-	SPIN_SANDBOX string
 	BASE_SANDBOX string
+	BASE_STARTED bool = false
 )
 
 // addToMappingsIfMissing ensures the specified id is mapped from the host.
@@ -342,22 +342,12 @@ func (s *Server) getSandboxIDMappings(ctx context.Context, sb *libsandbox.Sandbo
 }
 
 func isForkablePod(req *types.RunPodSandboxRequest) bool {
-	_, ok := req.Config.Annotations["cfork-function"]
-	return ok
-}
-
-func isSpinPod(req *types.RunPodSandboxRequest) bool {
-	_, ok := req.Config.Annotations["spin"]
-	return ok
+	return isBasePod(req) && BASE_STARTED
 }
 
 func isBasePod(req *types.RunPodSandboxRequest) bool {
 	_, ok := req.Config.Annotations["base"]
 	return ok
-}
-
-func (s *Server) getSpinPod() string {
-	return SPIN_SANDBOX
 }
 
 func (s *Server) getBasePod() string {
@@ -370,8 +360,8 @@ func (s *Server) runPodSandbox(ctx context.Context, req *types.RunPodSandboxRequ
 
 	// TODO: decide whether pod is forkable?
 	if isForkablePod(req) {
-		// return SPIN_SANDBOX in order to run function in spin_sandbox
-		return &types.RunPodSandboxResponse{PodSandboxId: SPIN_SANDBOX}, nil
+		log.Infof(ctx, "forkable\n")
+		return &types.RunPodSandboxResponse{PodSandboxId: BASE_SANDBOX}, nil
 	}
 
 	sbox := sboxfactory.New()
@@ -394,12 +384,11 @@ func (s *Server) runPodSandbox(ctx context.Context, req *types.RunPodSandboxRequ
 		return nil, fmt.Errorf("setting pod sandbox name and id: %w", err)
 	}
 
-	// check whether it's spin or base
+	// check whether it's base
 	if isBasePod(req) {
 		BASE_SANDBOX = sbox.ID()
-	}
-	if isSpinPod(req) {
-		SPIN_SANDBOX = sbox.ID()
+		BASE_STARTED = true
+		log.Infof(ctx, "get base, id=%s\n", BASE_SANDBOX)
 	}
 
 	resourceCleaner := resourcestore.NewResourceCleaner()

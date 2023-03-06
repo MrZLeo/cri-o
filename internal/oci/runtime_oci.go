@@ -334,19 +334,16 @@ func (r *runtimeOCI) StartContainer(ctx context.Context, c *Container) error {
 
 // call `runc fork2container` to fork container from base
 // if we want to fork a process, createContainer should give a
-func (r *runtimeOCI) ForkContainer(
-	ctx context.Context,
-	base string,
-	spin string,
-) (retErr error) {
+func (r *runtimeOCI) ForkContainer(ctx context.Context, base string, spin string) (retErr error) {
 	ctx, span := log.StartSpan(ctx)
 	defer span.End()
 
-	log.Infof(ctx, "cfork start, calling runc")
+	timeNow := time.Now().UnixNano()
+	log.Infof(ctx, "[cfork@%d,%06d] %s\n", timeNow/1e6, timeNow%1e6)
 
 	cmd := cmdrunner.Command(
-		// r.handler.RuntimePath,
-		"/home/fedora/runc/runc",
+		r.handler.RuntimePath,
+		// "/home/fedora/runc/runc",
 		"fork2container",
 		"--zygote",
 		base,

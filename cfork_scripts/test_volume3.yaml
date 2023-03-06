@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cfork-spin
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: my-app
+  template:
+    metadata:
+      labels:
+        app: my-app
+    spec:
+      containers:
+      - name: base
+        image: docker.io/mrzleo/spin-base-image
+        securityContext:
+          capabilities:
+            add:
+            - CAP_SYS_CHROOT
+            - CAP_SYS_ADMIN
+            - CAP_SETFCAP
+            - CAP_NET_RAW
+            - CAP_NET_BIND_SERVICE
+            - CAP_MKNOD
+            - CAP_AUDIT_WRITE

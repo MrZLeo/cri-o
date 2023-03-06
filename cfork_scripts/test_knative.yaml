@@ -7,16 +7,18 @@ spec:
   template:
     metadata:
         annotations:
-          autoscaling.knative.dev/min-scale: "1"
+          autoscaling.knative.dev/min-scale: "10"
+          spin: "true"
     spec:
         shareProcessNamespace: true
         containers:
-          - name: rust-demo
-            image: docker.io/mrzleo/rust-demo
+          - name: spin
+            env:
+              - name: spin
+                value: "true"
+            image: docker.io/mrzleo/spin-rs
             ports:
               - containerPort: 8080
-          - name: spin
-            image: docker.io/mrzleo/spin-base-image
             securityContext:
               capabilities:
                 add:
@@ -28,6 +30,9 @@ spec:
                 - CAP_MKNOD
                 - CAP_AUDIT_WRITE
           - name: base
+            env:
+              - name: base
+                value: "true"
             image: docker.io/mrzleo/python-base-image
             volumeMounts:
             - mountPath: /cfork/

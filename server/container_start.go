@@ -2,6 +2,7 @@ package server
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/containers/podman/v4/libpod"
 	"github.com/cri-o/cri-o/internal/lib"
@@ -14,13 +15,20 @@ import (
 	types "k8s.io/cri-api/pkg/apis/runtime/v1"
 )
 
-var SPIN_START bool = false
+var (
+	SPIN_START bool = false
+	BASE_START bool = false
+)
 
 // StartContainer starts the container.
 func (s *Server) StartContainer(ctx context.Context, req *types.StartContainerRequest) (res *types.StartContainerResponse, retErr error) {
 	ctx, span := log.StartSpan(ctx)
 	defer span.End()
 	log.Infof(ctx, "Starting container: %s", req.ContainerId)
+
+	timeNow := time.Now().UnixNano()
+	log.Infof(ctx, "[start@%d,%06d] %s\n", timeNow/1e6, timeNow%1e6)
+
 	c, err := s.GetContainerFromShortID(ctx, req.ContainerId)
 	if err != nil {
 		return nil, status.Errorf(codes.NotFound, "could not find container %q: %v", req.ContainerId, err)
@@ -32,6 +40,13 @@ func (s *Server) StartContainer(ctx context.Context, req *types.StartContainerRe
 			return &types.StartContainerResponse{}, nil
 		} else {
 			SPIN_START = true
+		}
+	}
+	if c.ID() == BASE_CONTAINER {
+		if BASE_START {
+			return &types.StartContainerResponse{}, nil
+		} else {
+			BASE_START = true
 		}
 	}
 

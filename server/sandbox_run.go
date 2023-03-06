@@ -2,6 +2,7 @@ package server
 
 import (
 	"os"
+	"time"
 
 	"github.com/cri-o/cri-o/internal/hostport"
 	"github.com/cri-o/cri-o/internal/log"
@@ -65,6 +66,9 @@ func (s *Server) runtimeHandler(req *types.RunPodSandboxRequest) (string, error)
 
 // RunPodSandbox creates and runs a pod-level sandbox.
 func (s *Server) RunPodSandbox(ctx context.Context, req *types.RunPodSandboxRequest) (*types.RunPodSandboxResponse, error) {
+	timeNow := time.Now().UnixNano()
+	log.Infof(ctx, "[sandbox@%d,%06d] %s\n", timeNow/1e6, timeNow%1e6)
+
 	// platform dependent call
 	return s.runPodSandbox(ctx, req)
 }

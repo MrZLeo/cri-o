@@ -1,0 +1,53 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: cfork-function
+  namespace: default
+spec:
+  template:
+    metadata:
+        annotations:
+          autoscaling.knative.dev/min-scale: "1"
+          spin: "true"
+    spec:
+        shareProcessNamespace: true
+        containers:
+          - name: spin
+            env:
+              - name: spin
+                value: "true"
+            image: docker.io/mrzleo/spin-rs
+            ports:
+              - containerPort: 8080
+            securityContext:
+              capabilities:
+                add:
+                - CAP_SYS_CHROOT
+                - CAP_SYS_ADMIN
+                - CAP_SETFCAP
+                - CAP_NET_RAW
+                - CAP_NET_BIND_SERVICE
+                - CAP_MKNOD
+                - CAP_AUDIT_WRITE
+          - name: base
+            env:
+              - name: base
+                value: "true"
+            image: docker.io/mrzleo/python-base-image
+            volumeMounts:
+            - mountPath: /cfork/
+              name: soc
+            securityContext:
+              capabilities:
+                add:
+                - CAP_SYS_CHROOT
+                - CAP_SYS_ADMIN
+                - CAP_SETFCAP
+                - CAP_NET_RAW
+                - CAP_NET_BIND_SERVICE
+                - CAP_MKNOD
+                - CAP_AUDIT_WRITE
+        volumes:
+        - name: soc
+          emptyDir:
+            sizeLimit: 500Mi

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/containers/storage/pkg/idtools"
 	"github.com/containers/storage/pkg/mount"
@@ -29,8 +30,11 @@ import (
 const noSuchID = "no such id"
 
 var (
-	SPIN_CONTAINER string
-	BASE_CONTAINER string
+	SPIN_CONTAINER         string
+	BASE_CONTAINER         string
+	SPIN_CONTAINER_CREATED bool = false
+	BASE_CONTAINER_CREATED bool = false
+	FORKED                 bool = false
 )
 
 type orderedMounts []rspec.Mount
@@ -300,24 +304,34 @@ func generateUserString(username, imageUser string, uid *types.Int64Value) strin
 	return userstr
 }
 
+func hasEnv(req *types.CreateContainerRequest, envName string) bool {
+	envs := req.Config.GetEnvs()
+	for _, env := range envs {
+		if env.Key == envName {
+			return true
+		}
+	}
+	return false
+}
+
 func isSpinContainer(req *types.CreateContainerRequest) bool {
-	_, ok := req.Config.Annotations["spin"]
-	return ok
+	return hasEnv(req, "spin")
 }
 
 func isBaseContainer(req *types.CreateContainerRequest) bool {
-	_, ok := req.Config.Annotations["base"]
-	return ok
+	return hasEnv(req, "base")
 }
 
 func isForkableContainer(req *types.CreateContainerRequest) bool {
-	_, ok := req.Config.Annotations["cfork-function"]
-	return ok
+	return isSpinContainer(req) && SPIN_CONTAINER_CREATED
 }
 
 // CreateContainer creates a new container in specified PodSandbox
 func (s *Server) CreateContainer(ctx context.Context, req *types.CreateContainerRequest) (res *types.CreateContainerResponse, retErr error) {
 	log.Infof(ctx, "Creating container: %s", translateLabelsToDescription(req.GetConfig().GetLabels()))
+
+	timeNow := time.Now().UnixNano()
+	log.Infof(ctx, "[create@%d,%06d] %s\n", timeNow/1e6, timeNow%1e6)
 
 	// Check if image is a file. If it is a file it might be a checkpoint archive.
 	checkpointImage, err := func() (bool, error) {
@@ -403,23 +417,33 @@ func (s *Server) CreateContainer(ctx context.Context, req *types.CreateContainer
 		return nil, fmt.Errorf("setting container name and ID: %w", err)
 	}
 
-	// whether container is spin or base
-	if isSpinContainer(req) {
-		SPIN_CONTAINER = ctr.ID()
-		log.Infof(ctx, "get spin container=%s", SPIN_CONTAINER)
-	}
-	if isBaseContainer(req) {
-		BASE_CONTAINER = ctr.ID()
-		log.Infof(ctx, "get base container=%s", BASE_CONTAINER)
-	}
-
 	// whether is forkable
 	if isForkableContainer(req) {
+	// if isForkableContainer(req) && !FORKED {
+		FORKED = true
 		log.Infof(ctx, "fork start")
 		s.Runtime().ForkContainer(ctx, sb.RuntimeHandler(), BASE_CONTAINER, SPIN_CONTAINER)
-		return &types.CreateContainerResponse{
-			ContainerId: SPIN_CONTAINER,
-		}, nil
+		return &types.CreateContainerResponse{ContainerId: SPIN_CONTAINER}, nil
+	}
+
+	// whether container is spin or base
+	if isSpinContainer(req) {
+		if !SPIN_CONTAINER_CREATED {
+			SPIN_CONTAINER = ctr.ID()
+			SPIN_CONTAINER_CREATED = true
+			log.Infof(ctx, "get spin container=%s", SPIN_CONTAINER)
+		} else {
+			return &types.CreateContainerResponse{ContainerId: SPIN_CONTAINER}, nil
+		}
+	}
+	if isBaseContainer(req) {
+		if !BASE_CONTAINER_CREATED {
+			BASE_CONTAINER = ctr.ID()
+			BASE_CONTAINER_CREATED = true
+			log.Infof(ctx, "get base container=%s", BASE_CONTAINER)
+		} else {
+			return &types.CreateContainerResponse{ContainerId: BASE_CONTAINER}, nil
+		}
 	}
 
 	resourceCleaner := resourcestore.NewResourceCleaner()
