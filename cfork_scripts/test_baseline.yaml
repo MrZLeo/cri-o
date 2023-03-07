@@ -1,0 +1,27 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: baseline
+  namespace: default
+spec:
+  template:
+    # metadata:
+        # annotations:
+        #   autoscaling.knative.dev/min-scale: "10"
+    spec:
+        shareProcessNamespace: true
+        containers:
+          - name: user-container
+            image: docker.io/mrzleo/baseline-cfork
+            ports:
+              - containerPort: 8080
+            securityContext:
+              capabilities:
+                add:
+                - CAP_SYS_CHROOT
+                - CAP_SYS_ADMIN
+                - CAP_SETFCAP
+                - CAP_NET_RAW
+                - CAP_NET_BIND_SERVICE
+                - CAP_MKNOD
+                - CAP_AUDIT_WRITE

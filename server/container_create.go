@@ -28,13 +28,14 @@ import (
 
 // sync with https://github.com/containers/storage/blob/7fe03f6c765f2adbc75a5691a1fb4f19e56e7071/pkg/truncindex/truncindex.go#L92
 const noSuchID = "no such id"
+const FORK_LIMIT = 10
 
 var (
 	SPIN_CONTAINER         string
 	BASE_CONTAINER         string
 	SPIN_CONTAINER_CREATED bool = false
 	BASE_CONTAINER_CREATED bool = false
-	FORKED                 bool = false
+	FORKED                 int  = 0
 )
 
 type orderedMounts []rspec.Mount
@@ -418,9 +419,8 @@ func (s *Server) CreateContainer(ctx context.Context, req *types.CreateContainer
 	}
 
 	// whether is forkable
-	if isForkableContainer(req) {
-	// if isForkableContainer(req) && !FORKED {
-		FORKED = true
+	if isForkableContainer(req) && FORKED < FORK_LIMIT {
+		FORKED += 1
 		log.Infof(ctx, "fork start")
 		s.Runtime().ForkContainer(ctx, sb.RuntimeHandler(), BASE_CONTAINER, SPIN_CONTAINER)
 		return &types.CreateContainerResponse{ContainerId: SPIN_CONTAINER}, nil

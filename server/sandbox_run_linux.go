@@ -44,8 +44,9 @@ const DefaultUserNSSize = 65536
 
 // Store the ID of spin_sandbox and base_sandbox
 var (
-	BASE_SANDBOX string
-	BASE_STARTED bool = false
+	BASE_SANDBOX     string
+	BASE_STARTED     bool              = false
+	SABE_SANDBOX_IDS map[string]string = make(map[string]string)
 )
 
 // addToMappingsIfMissing ensures the specified id is mapped from the host.
@@ -346,8 +347,9 @@ func isForkablePod(req *types.RunPodSandboxRequest) bool {
 }
 
 func isBasePod(req *types.RunPodSandboxRequest) bool {
-	_, ok := req.Config.Annotations["base"]
-	return ok
+	// _, ok := req.Config.Metadata.Name
+	// return ok
+	return strings.Contains(req.Config.Metadata.Name, "multi-container")
 }
 
 func (s *Server) getBasePod() string {
@@ -358,9 +360,9 @@ func (s *Server) runPodSandbox(ctx context.Context, req *types.RunPodSandboxRequ
 	ctx, span := log.StartSpan(ctx)
 	defer span.End()
 
-	// TODO: decide whether pod is forkable?
+	// whether pod is forkable?
 	if isForkablePod(req) {
-		log.Infof(ctx, "forkable\n")
+		log.Infof(ctx, "forkable")
 		return &types.RunPodSandboxResponse{PodSandboxId: BASE_SANDBOX}, nil
 	}
 
