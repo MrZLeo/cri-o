@@ -7,7 +7,8 @@ spec:
   template:
     metadata:
         annotations:
-          autoscaling.knative.dev/min-scale: "10"
+          autoscaling.knative.dev/min-scale: "2"
+          cfork-template: "test"
     spec:
         shareProcessNamespace: true
         containers:

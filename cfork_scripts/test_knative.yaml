@@ -8,6 +8,7 @@ spec:
     metadata:
         annotations:
           autoscaling.knative.dev/min-scale: "1"
+          cfork-template: "demo"
     spec:
         shareProcessNamespace: true
         containers:
